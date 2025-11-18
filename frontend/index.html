@@ -2,14 +2,17 @@
 <html>
 <head><meta charset="utf-8"><title>Frontend</title></head>
 <body>
-  <h1>Frontend - OK</h1>
-  <p>API base: <span id="api"></span></p>
-  <p>J'être fonctionnel</p>  
+  <h1>Frontend - Health Check</h1>
+  <p>API Status: <span id="api">En attente...</span></p>
+  
   <script>
-    fetch('http://localhost:3002/api')
+    fetch('http://localhost:3002/health')
       .then(r => r.json())
       .then(j => document.getElementById('api').innerText = JSON.stringify(j))
-      .catch(e => document.getElementById('api').innerText = "API unreachable");
+      .catch(e => {
+          console.error("Erreur fetch:", e);
+          document.getElementById('api').innerText = "API unreachable";
+      });
   </script>
 </body>
 </html>

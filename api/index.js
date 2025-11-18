@@ -1,5 +1,6 @@
 const express = require('express');
 const client = require('prom-client');
+const cors = require('cors');
 
 const app = express();
 
@@ -9,9 +10,10 @@ const collectDefaultMetrics = client.collectDefaultMetrics;
 collectDefaultMetrics();
 const register = client.register;
 
-app.get('/api', (req, res) => res.json({ message: 'API OK' }));
+app.get('/', (req, res) => res.json({ message: 'API OK' }));
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', register.contentType);
   res.end(await register.metrics());
