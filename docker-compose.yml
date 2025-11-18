@@ -1,0 +1,32 @@
+services:
+  api:
+    image: nathalanlemoine/devsecopsapi:latest
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+  
+  fontend:
+    image: nathalanlemoine/devsecopsfront:latest
+    ports:
+      - "8080:80"
+    environment:
+      - NODE_ENV=production
+  
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+  
+  grafana:
+    image: grafana/grafana-oss:9.0.0
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus

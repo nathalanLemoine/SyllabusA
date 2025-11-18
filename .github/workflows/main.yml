@@ -1,0 +1,120 @@
+name: DevSecOps Production Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  IMAGE_API: nathalanlemoine/devsecopsapi
+  IMAGE_FRONT: nathalanlemoine/devsecopsfront
+  # Le dossier sur ta VM où tu veux stocker le projet
+  DEPLOY_PATH: /srv/myapp 
+
+jobs:
+  # ------------------------------------------
+  # ÉTAPE 1 : SAST (Analyse du Code - Cloud)
+  # ------------------------------------------
+  security-sast:
+    name: SAST - Semgrep Analysis
+    runs-on: ubuntu-latest
+    continue-on-error: true 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Semgrep Security Scan
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: auto
+          auditOn: push
+
+  # ------------------------------------------
+  # ÉTAPE 2 : BUILD & PUSH (Docker - Cloud)
+  # ------------------------------------------
+  build-and-push:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: security-sast
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build & Push API
+        uses: docker/build-push-action@v5
+        with:
+          context: ./api
+          push: true
+          tags: ${{ env.IMAGE_API }}:latest
+      
+      - name: Build & Push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ env.IMAGE_FRONT }}:latest
+
+  # ------------------------------------------
+  # ÉTAPE 3 : CONTAINER SCAN (Trivy - Cloud)
+  # ------------------------------------------
+  security-container:
+    name: Scan Vulnerabilities (Trivy)
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    continue-on-error: true
+    steps:
+      - name: Scan API Image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.IMAGE_API }}:latest'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+      
+      - name: Scan Frontend Image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.IMAGE_FRONT }}:latest'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+
+  # ------------------------------------------
+  # ÉTAPE 4 : DEPLOY (Ta VM - Self Hosted)
+  # ------------------------------------------
+  deploy:
+    name: Deploy on VirtualBox
+    needs: security-container
+    runs-on: self-hosted # C'est ici que la magie opère
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        # Cela télécharge le docker-compose.yml dans le dossier de travail du runner
+
+      - name: Deploy Application
+        run: |
+          # 1. Création du dossier cible s'il n'existe pas (besoin de droits sudo potentiellement gérés en amont)
+          mkdir -p ${{ env.DEPLOY_PATH }}
+          
+          # 2. Copie du docker-compose vers le dossier stable
+          cp docker-compose.yml ${{ env.DEPLOY_PATH }}/
+          
+          # 3. Login Docker (Sur ta VM) pour pouvoir télécharger tes images privées
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login --username ${{ secrets.DOCKER_USERNAME }} --password-stdin
+          
+          # 4. Exécution des commandes Docker
+          cd ${{ env.DEPLOY_PATH }}
+          
+          echo "⬇️ Téléchargement des nouvelles images..."
+          docker compose pull
+          
+          echo "🚀 Redémarrage des services..."
+          docker compose up -d --remove-orphans
+          
+          echo "🧹 Nettoyage des vieilles images..."
+          docker image prune -f
