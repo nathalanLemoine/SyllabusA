@@ -87,7 +87,6 @@ jobs:
   # ------------------------------------------
   # ÉTAPE 4 : DEPLOY (Ta VM - Self Hosted)
   # ------------------------------------------
-  # ... (début du fichier identique)
 
   deploy:
     name: Deploy on VirtualBox
@@ -101,10 +100,6 @@ jobs:
         run: |
           # Création du dossier cible
           mkdir -p ${{ env.DEPLOY_PATH }}
-          
-          # ====================================================
-          # ⚠️ CORRECTION ICI
-          # ====================================================
           
           # 1. On supprime le dossier monitoring existant sur la VM 
           # (C'est crucial car Docker a créé un "faux" dossier corrompu lors de l'erreur précédente)
@@ -124,13 +119,13 @@ jobs:
           # Exécution
           cd ${{ env.DEPLOY_PATH }}
           
-          echo "⬇️ Téléchargement des nouvelles images..."
+          echo "⬇Téléchargement des nouvelles images..."
           docker-compose pull
           
-          echo "🚀 Redémarrage des services..."
+          echo "Redémarrage des services..."
           # On relance tout (le down permet de nettoyer l'état d'erreur précédent)
           docker-compose down
           docker-compose up -d --remove-orphans
           
-          echo "🧹 Nettoyage..."
+          echo "Nettoyage..."
           docker image prune -f
