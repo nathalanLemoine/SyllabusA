@@ -87,34 +87,50 @@ jobs:
   # ------------------------------------------
   # ÉTAPE 4 : DEPLOY (Ta VM - Self Hosted)
   # ------------------------------------------
+  # ... (début du fichier identique)
+
   deploy:
     name: Deploy on VirtualBox
     needs: security-container
-    runs-on: self-hosted # C'est ici que la magie opère
+    runs-on: self-hosted
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        # Cela télécharge le docker-compose.yml dans le dossier de travail du runner
 
       - name: Deploy Application
         run: |
-          # 1. Création du dossier cible s'il n'existe pas (besoin de droits sudo potentiellement gérés en amont)
+          # Création du dossier cible
           mkdir -p ${{ env.DEPLOY_PATH }}
           
-          # 2. Copie du docker-compose vers le dossier stable
-          cp docker-compose.yml ${{ env.DEPLOY_PATH }}/
+          # ====================================================
+          # ⚠️ CORRECTION ICI
+          # ====================================================
           
-          # 3. Login Docker (Sur ta VM) pour pouvoir télécharger tes images privées
+          # 1. On supprime le dossier monitoring existant sur la VM 
+          # (C'est crucial car Docker a créé un "faux" dossier corrompu lors de l'erreur précédente)
+          rm -rf ${{ env.DEPLOY_PATH }}/monitoring
+
+          # 2. On copie le fichier docker-compose
+          cp docker-compose.yml ${{ env.DEPLOY_PATH }}/
+
+          # 3. On copie le dossier monitoring (avec le prometheus.yml dedans)
+          cp -r monitoring ${{ env.DEPLOY_PATH }}/
+          
+          # ====================================================
+          
+          # Login Docker
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login --username ${{ secrets.DOCKER_USERNAME }} --password-stdin
           
-          # 4. Exécution des commandes Docker
+          # Exécution
           cd ${{ env.DEPLOY_PATH }}
           
           echo "⬇️ Téléchargement des nouvelles images..."
           docker-compose pull
           
           echo "🚀 Redémarrage des services..."
+          # On relance tout (le down permet de nettoyer l'état d'erreur précédent)
+          docker-compose down
           docker-compose up -d --remove-orphans
           
-          echo "🧹 Nettoyage des vieilles images..."
+          echo "🧹 Nettoyage..."
           docker image prune -f
