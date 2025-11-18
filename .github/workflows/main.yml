@@ -111,10 +111,10 @@ jobs:
           cd ${{ env.DEPLOY_PATH }}
           
           echo "⬇️ Téléchargement des nouvelles images..."
-          docker compose pull
+          docker-compose pull
           
           echo "🚀 Redémarrage des services..."
-          docker compose up -d --remove-orphans
+          docker-compose up -d --remove-orphans
           
           echo "🧹 Nettoyage des vieilles images..."
           docker image prune -f
