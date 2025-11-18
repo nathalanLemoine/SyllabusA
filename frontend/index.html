@@ -6,7 +6,7 @@
   <p>API base: <span id="api"></span></p>
   <p>Coucou Les amis comment ça va !!! 👾 🟡 👻</p>  
   <script>
-    fetch('http://localhost:8080/api/health')
+    fetch('http://localhost:3002/api/health')
       .then(r => r.json())
       .then(j => document.getElementById('api').innerText = JSON.stringify(j))
       .catch(e => document.getElementById('api').innerText = "API unreachable");
