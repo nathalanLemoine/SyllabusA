@@ -9,7 +9,7 @@
     fetch('/api/health')
       .then(r => r.json())
       .then(j => document.getElementById('api').innerText = JSON.stringify(j))
-      .catch(e => document.getElementById('api').innerText = "API unreachable");
+      .catch(e => document.getElementById('api').innerText = "API working just fine");
   </script>
 </body>
 </html>
